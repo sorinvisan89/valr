@@ -11,7 +11,7 @@ import java.time.Instant
 import java.util.*
 
 @Service
-class OrderBookManager {
+class OrderBookManager(private val idGenerator: IdGenerator) {
 
     private val log = LoggerFactory.getLogger(OrderBookManager::class.java)
 
@@ -25,21 +25,23 @@ class OrderBookManager {
 
     fun placeLimitOrder(order: Order): Order {
         val orderBook = orderBooks.getOrPut(order.pair) { createOrderBook() }
-        orderBook.sequenceNumber.inc()
+        orderBook.sequenceNumber++
 
         when (order.side) {
             Side.BUY -> {
                 val remainingQuantity = matchOrder(order, orderBook.asks, orderBook, order.pair)
                 if (remainingQuantity > 0.0) {
                     // Add remaining quantity as a new buy order
-                    orderBook.bids.add(order.copy(quantity = remainingQuantity))
+                    val newOrder =
+                        order.copy(quantity = remainingQuantity, id = idGenerator.generate())
+                    orderBook.bids.add(newOrder)
                 }
             }
             Side.SELL -> {
                 val remainingQuantity = matchOrder(order, orderBook.bids, orderBook, order.pair)
                 if (remainingQuantity > 0.0) {
                     // Add remaining quantity as a new sell order
-                    orderBook.asks.add(order.copy(quantity = remainingQuantity))
+                    orderBook.asks.add(order.copy(quantity = remainingQuantity, id = idGenerator.generate()))
                 }
             }
         }
@@ -54,7 +56,7 @@ class OrderBookManager {
         oppositeOrders: MutableSet<Order>,
         orderBook: OrderBook,
         pair: Currency
-    ) : Double {
+    ): Double {
         val trades = recentTrades.getOrPut(pair) { mutableListOf() }
 
         var remainingQuantity = order.quantity
@@ -98,8 +100,14 @@ class OrderBookManager {
     }
 
     private fun createOrderBook(): OrderBook = OrderBook(
-        asks = TreeSet(compareBy<Order> { it.price }),
-        bids = TreeSet(compareByDescending<Order> { it.price })
+        asks = TreeSet(compareBy<Order> { it.price }
+            .thenBy { it.timestamp }
+            .thenBy { it.id }
+        ),
+        bids = TreeSet(compareByDescending<Order> { it.price }
+            .thenBy { it.timestamp }
+            .thenBy { it.id }
+        )
     )
 
 }
