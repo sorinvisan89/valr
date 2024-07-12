@@ -76,8 +76,9 @@ class OrderBookIntegrationTest {
         response.body shouldNotBe null
         val body = response.body!!
         body.id shouldNotBe null
-        body.id shouldNotBe null
-        body.id shouldNotBe null
+        body.pair shouldBe Currency.BTCZAR
+        body.quantity shouldBe 1.0
+        body.price shouldBe 50000
 
         val retrieveUrl = "http://localhost:${port}/api/orderbook/BTCZAR"
 
@@ -87,7 +88,7 @@ class OrderBookIntegrationTest {
         val orders = retrieveResponse.body!!
         orders.asks.size shouldBe 1
         orders.asks.first().id shouldNotBe null
-        orders.asks.first().quantity shouldBe  1.0
+        orders.asks.first().quantity shouldBe 1.0
         orders.asks.first().pair shouldBe Currency.BTCZAR
         orders.asks.first().price shouldBe 50000
         orders.asks.first().side shouldBe Side.SELL
