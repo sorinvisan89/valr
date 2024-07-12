@@ -55,12 +55,15 @@ class OrderBookManager {
     ) {
         val trades = recentTrades.getOrPut(pair) { mutableListOf() }
 
-        val iterator = oppositeOrders.iterator()
-        while (iterator.hasNext()) {
-            val oppositeOrder = iterator.next()
-            if ((order.side == Side.BUY && order.price >= oppositeOrder.price) ||
-                (order.side == Side.SELL && order.price <= oppositeOrder.price)
-            ) {
+        val ordersToRemove = oppositeOrders.asSequence()
+            .takeWhile { oppositeOrder ->
+                (order.side == Side.BUY && order.price >= oppositeOrder.price) ||
+                        (order.side == Side.SELL && order.price <= oppositeOrder.price)
+            }
+            .takeWhile {
+                order.quantity > 0.0
+            }
+            .mapNotNull { oppositeOrder ->
                 val tradedQuantity = minOf(order.quantity, oppositeOrder.quantity)
                 val trade = Trade(
                     price = oppositeOrder.price,
@@ -76,14 +79,17 @@ class OrderBookManager {
                 order.quantity -= tradedQuantity
                 oppositeOrder.quantity -= tradedQuantity
 
-                if (oppositeOrder.quantity == 0.0) {
-                    iterator.remove()  // Remove from oppositeOrders if quantity is zero
-                }
-
-                if (order.quantity == 0.0) {
-                    break
+                if (oppositeOrder.quantity <= 0.0) {
+                    oppositeOrder // Collect orders to be removed
+                } else {
+                    null
                 }
             }
+
+        val toRemove = ordersToRemove.toList()
+        if (toRemove.isNotEmpty()) {
+            oppositeOrders.removeAll(toRemove)
+            log.info("Removed orders ${toRemove.size}")
         }
     }
 

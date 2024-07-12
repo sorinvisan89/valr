@@ -144,7 +144,7 @@ class OrderBookManagerTest : FunSpec({
             val initialOrderBook = OrderBook(
                 asks = mutableSetOf(
                     Order(id = "1", side = Side.SELL, quantity = 0.5, price = 1000000, pair = pair),
-                    Order(id = "2", side = Side.SELL, quantity = 1.0, price = 1000000, pair = pair)
+                    Order(id = "2", side = Side.SELL, quantity = 1.0, price = 1100000, pair = pair)
                 ),
                 lastChange = Instant.now(),
                 sequenceNumber = 1
@@ -154,29 +154,87 @@ class OrderBookManagerTest : FunSpec({
 
             // Place an order that overfills the demand
             val overfillOrder =
-                Order(id = "4", side = Side.BUY, quantity = 2.0, price = 1000000, pair = pair)
+                Order(id = "4", side = Side.BUY, quantity = 2.0, price = 1200000, pair = pair)
             val resultOrder = orderBookManager.placeLimitOrder(overfillOrder)
 
-            withClue("Assert that the result order has been partially filled") {
-                resultOrder.quantity shouldBe 0.5
+            // Assert that the result order has been partially filled
+            resultOrder.quantity shouldBe 0.5
+
+            // Assert that the order book state has been updated
+            val updatedOrderBook = orderBookManager.getOrderBook(pair)
+            updatedOrderBook.asks.size shouldBe 0
+            updatedOrderBook.bids.size shouldBe 1
+            val generatedOrder = updatedOrderBook.bids.first()
+            withClue("The overfilling amount was place as a new order") {
+                generatedOrder shouldBe Order(
+                    id = "4",
+                    side = Side.BUY,
+                    quantity = 0.5,
+                    price = 1200000L,
+                    pair = pair,
+                    timestamp = generatedOrder.timestamp
+                )
             }
 
-            withClue("Assert that the order book state has been updated") {
-                val updatedOrderBook = orderBookManager.getOrderBook(pair)
-                updatedOrderBook.asks.size shouldBe 0
-                updatedOrderBook.bids.size shouldBe 1
-                val generatedOrder = updatedOrderBook.bids.first()
-                withClue("The overfilling ammount was place as a new order") {
-                    generatedOrder shouldBe Order(
-                        id = "4",
-                        side = Side.BUY,
-                        quantity = 0.5,
-                        price = 1000000,
-                        pair = pair,
-                        timestamp = generatedOrder.timestamp
-                    )
-                }
+            // Check the matched trades
+            val trades = orderBookManager.getRecentTrades(pair)
+            trades shouldHaveSize 2
+            trades[0].price shouldBeExactly 1000000
+            trades[0].quantity shouldBeExactly 0.5
+            trades[1].price shouldBeExactly 1100000
+            trades[1].quantity shouldBeExactly 1.0
+
+        }
+    }
+
+    test("Order matching doesn't match on last order prices") {
+        val orderBookManager = createOrderBookManager()
+
+        withClue("Assume we have an existing order book with some orders") {
+            val pair = Currency.BTCZAR
+            val initialOrderBook = OrderBook(
+                asks = mutableSetOf(
+                    Order(id = "1", side = Side.SELL, quantity = 0.5, price = 1000000, pair = pair),
+                    Order(id = "2", side = Side.SELL, quantity = 1.0, price = 1100000, pair = pair)
+                ),
+                lastChange = Instant.now(),
+                sequenceNumber = 1
+            )
+
+            orderBookManager.orderBooks[pair] = initialOrderBook
+
+            // Place an order that overfills the demand
+            val overfillOrder =
+                Order(id = "4", side = Side.BUY, quantity = 2.0, price = 100500, pair = pair)
+            val resultOrder = orderBookManager.placeLimitOrder(overfillOrder)
+
+            // Assert that the result order has been partially filled
+            resultOrder.quantity shouldBe 0.5
+
+            // Assert that the order book state has been updated
+            val updatedOrderBook = orderBookManager.getOrderBook(pair)
+            updatedOrderBook.asks.size shouldBe 0
+            updatedOrderBook.bids.size shouldBe 1
+            val generatedOrder = updatedOrderBook.bids.first()
+            withClue("The overfilling amount was place as a new order") {
+                generatedOrder shouldBe Order(
+                    id = "4",
+                    side = Side.BUY,
+                    quantity = 0.5,
+                    price = 1200000L,
+                    pair = pair,
+                    timestamp = generatedOrder.timestamp
+                )
             }
+
+            // Check the matched trades
+            val trades = orderBookManager.getRecentTrades(pair)
+            trades shouldHaveSize 2
+            trades[0].price shouldBeExactly 1000000
+            trades[0].quantity shouldBeExactly 0.5
+            trades[1].price shouldBeExactly 1100000
+            trades[1].quantity shouldBeExactly 1.0
+
         }
     }
 })
