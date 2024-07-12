@@ -40,8 +40,12 @@ class OrderBookManagerTest : FunSpec({
         orderBookManager.placeLimitOrder(order)
 
         val orderBook = orderBookManager.getOrderBook(currency)
-        orderBook.bids shouldHaveSize 1
+
         orderBook.asks shouldHaveSize 0
+        orderBook.bids shouldHaveSize 1
+        orderBook.bids.first() shouldBe order
+
+        orderBookManager.getRecentTrades(currency).size shouldBe 0
     }
 
     test("placeLimitOrder adds a new sell order") {
@@ -61,6 +65,9 @@ class OrderBookManagerTest : FunSpec({
         val orderBook = orderBookManager.getOrderBook(currency)
         orderBook.bids shouldHaveSize 0
         orderBook.asks shouldHaveSize 1
+        orderBook.asks.first() shouldBe order
+
+        orderBookManager.getRecentTrades(currency).size shouldBe 0
     }
 
     test("matchOrder matches and removes orders correctly") {
@@ -128,7 +135,17 @@ class OrderBookManagerTest : FunSpec({
         val orderBook = orderBookManager.getOrderBook(currency)
         orderBook.bids shouldHaveSize 0
         orderBook.asks shouldHaveSize 1
-        orderBook.asks.first().quantity shouldBeExactly 0.5
+        val generatedOrder = orderBook.asks.first()
+        withClue("The overfilling amount was place as a new order") {
+            generatedOrder shouldBe Order(
+                id = "1",
+                side = Side.SELL,
+                quantity = 0.5,
+                price = 50000,
+                pair = currency,
+                timestamp = generatedOrder.timestamp
+            )
+        }
 
         val trades = orderBookManager.getRecentTrades(currency)
         trades shouldHaveSize 1
@@ -157,8 +174,8 @@ class OrderBookManagerTest : FunSpec({
                 Order(id = "4", side = Side.BUY, quantity = 2.0, price = 1200000, pair = pair)
             val resultOrder = orderBookManager.placeLimitOrder(overfillOrder)
 
-            // Assert that the result order has been partially filled
-            resultOrder.quantity shouldBe 0.5
+            // Assert that the result order has been filled
+            resultOrder.quantity shouldBe 2.0
 
             // Assert that the order book state has been updated
             val updatedOrderBook = orderBookManager.getOrderBook(pair)
@@ -205,36 +222,33 @@ class OrderBookManagerTest : FunSpec({
 
             // Place an order that overfills the demand
             val overfillOrder =
-                Order(id = "4", side = Side.BUY, quantity = 2.0, price = 100500, pair = pair)
+                Order(id = "4", side = Side.BUY, quantity = 2.0, price = 1000500, pair = pair)
             val resultOrder = orderBookManager.placeLimitOrder(overfillOrder)
 
-            // Assert that the result order has been partially filled
-            resultOrder.quantity shouldBe 0.5
+            // Assert that the result order has been fully filled
+            resultOrder.quantity shouldBe 2.0
 
             // Assert that the order book state has been updated
             val updatedOrderBook = orderBookManager.getOrderBook(pair)
-            updatedOrderBook.asks.size shouldBe 0
+            updatedOrderBook.asks.size shouldBe 2
             updatedOrderBook.bids.size shouldBe 1
             val generatedOrder = updatedOrderBook.bids.first()
             withClue("The overfilling amount was place as a new order") {
                 generatedOrder shouldBe Order(
                     id = "4",
                     side = Side.BUY,
-                    quantity = 0.5,
-                    price = 1200000L,
+                    quantity = 1.5,
+                    price = 1000500,
                     pair = pair,
                     timestamp = generatedOrder.timestamp
                 )
             }
 
-            // Check the matched trades
+            // Check the matched trades which contains the first partial match
             val trades = orderBookManager.getRecentTrades(pair)
-            trades shouldHaveSize 2
+            trades shouldHaveSize 1
             trades[0].price shouldBeExactly 1000000
             trades[0].quantity shouldBeExactly 0.5
-            trades[1].price shouldBeExactly 1100000
-            trades[1].quantity shouldBeExactly 1.0
-
         }
     }
 })

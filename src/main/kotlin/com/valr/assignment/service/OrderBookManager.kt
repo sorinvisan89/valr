@@ -29,15 +29,17 @@ class OrderBookManager {
 
         when (order.side) {
             Side.BUY -> {
-                matchOrder(order, orderBook.asks, orderBook, order.pair)
-                if (order.quantity > 0) {
-                    orderBook.bids.add(order)  // Add remaining quantity as a new buy order
+                val remainingQuantity = matchOrder(order, orderBook.asks, orderBook, order.pair)
+                if (remainingQuantity > 0.0) {
+                    // Add remaining quantity as a new buy order
+                    orderBook.bids.add(order.copy(quantity = remainingQuantity))
                 }
             }
             Side.SELL -> {
-                matchOrder(order, orderBook.bids, orderBook, order.pair)
-                if (order.quantity > 0) {
-                    orderBook.asks.add(order)  // Add remaining quantity as a new sell order
+                val remainingQuantity = matchOrder(order, orderBook.bids, orderBook, order.pair)
+                if (remainingQuantity > 0.0) {
+                    // Add remaining quantity as a new sell order
+                    orderBook.asks.add(order.copy(quantity = remainingQuantity))
                 }
             }
         }
@@ -52,19 +54,18 @@ class OrderBookManager {
         oppositeOrders: MutableSet<Order>,
         orderBook: OrderBook,
         pair: Currency
-    ) {
+    ) : Double {
         val trades = recentTrades.getOrPut(pair) { mutableListOf() }
 
+        var remainingQuantity = order.quantity
+
         val ordersToRemove = oppositeOrders.asSequence()
-            .takeWhile { oppositeOrder ->
+            .filter { oppositeOrder ->
                 (order.side == Side.BUY && order.price >= oppositeOrder.price) ||
                         (order.side == Side.SELL && order.price <= oppositeOrder.price)
             }
-            .takeWhile {
-                order.quantity > 0.0
-            }
             .mapNotNull { oppositeOrder ->
-                val tradedQuantity = minOf(order.quantity, oppositeOrder.quantity)
+                val tradedQuantity = minOf(remainingQuantity, oppositeOrder.quantity)
                 val trade = Trade(
                     price = oppositeOrder.price,
                     quantity = tradedQuantity,
@@ -76,7 +77,8 @@ class OrderBookManager {
                     quoteVolume = tradedQuantity * oppositeOrder.price
                 )
                 trades.add(trade)
-                order.quantity -= tradedQuantity
+                remainingQuantity -= tradedQuantity
+                // Update the remaining quantity of the opposite order
                 oppositeOrder.quantity -= tradedQuantity
 
                 if (oppositeOrder.quantity <= 0.0) {
@@ -85,12 +87,14 @@ class OrderBookManager {
                     null
                 }
             }
+            .toList()
 
-        val toRemove = ordersToRemove.toList()
-        if (toRemove.isNotEmpty()) {
-            oppositeOrders.removeAll(toRemove)
-            log.info("Removed orders ${toRemove.size}")
+        if (ordersToRemove.isNotEmpty()) {
+            oppositeOrders.removeAll(ordersToRemove)
+            log.info("Removed orders ${ordersToRemove.size}")
         }
+
+        return remainingQuantity
     }
 
     private fun createOrderBook(): OrderBook = OrderBook(
