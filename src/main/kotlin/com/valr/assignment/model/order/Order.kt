@@ -10,5 +10,5 @@ data class Order(
     var quantity: Double,
     val price: Long,
     val pair: Currency,
-    val timestamp: Instant
+    val timestamp: Instant = Instant.now()
 )

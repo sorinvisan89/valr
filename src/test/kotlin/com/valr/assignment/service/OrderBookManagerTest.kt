@@ -2,11 +2,14 @@ package com.valr.assignment.service
 
 import com.valr.assignment.model.currency.Currency
 import com.valr.assignment.model.order.Order
+import com.valr.assignment.model.order.OrderBook
 import com.valr.assignment.model.order.Side
+import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.doubles.shouldBeExactly
 import io.kotest.matchers.longs.shouldBeExactly
+import io.kotest.matchers.shouldBe
 import java.time.Instant
 
 
@@ -131,5 +134,49 @@ class OrderBookManagerTest : FunSpec({
         trades shouldHaveSize 1
         trades[0].price shouldBeExactly 50000
         trades[0].quantity shouldBeExactly 0.5
+    }
+
+    test("Order matching overfills demand") {
+        val orderBookManager = createOrderBookManager()
+
+        withClue("Assume we have an existing order book with some orders") {
+            val pair = Currency.BTCZAR
+            val initialOrderBook = OrderBook(
+                asks = mutableSetOf(
+                    Order(id = "1", side = Side.SELL, quantity = 0.5, price = 1000000, pair = pair),
+                    Order(id = "2", side = Side.SELL, quantity = 1.0, price = 1000000, pair = pair)
+                ),
+                lastChange = Instant.now(),
+                sequenceNumber = 1
+            )
+
+            orderBookManager.orderBooks[pair] = initialOrderBook
+
+            // Place an order that overfills the demand
+            val overfillOrder =
+                Order(id = "4", side = Side.BUY, quantity = 2.0, price = 1000000, pair = pair)
+            val resultOrder = orderBookManager.placeLimitOrder(overfillOrder)
+
+            withClue("Assert that the result order has been partially filled") {
+                resultOrder.quantity shouldBe 0.5
+            }
+
+            withClue("Assert that the order book state has been updated") {
+                val updatedOrderBook = orderBookManager.getOrderBook(pair)
+                updatedOrderBook.asks.size shouldBe 0
+                updatedOrderBook.bids.size shouldBe 1
+                val generatedOrder = updatedOrderBook.bids.first()
+                withClue("The overfilling ammount was place as a new order") {
+                    generatedOrder shouldBe Order(
+                        id = "4",
+                        side = Side.BUY,
+                        quantity = 0.5,
+                        price = 1000000,
+                        pair = pair,
+                        timestamp = generatedOrder.timestamp
+                    )
+                }
+            }
+        }
     }
 })

@@ -15,32 +15,33 @@ class OrderBookManager {
 
     private val log = LoggerFactory.getLogger(OrderBookManager::class.java)
 
-    private val orderBooks = mutableMapOf<Currency, OrderBook>()
+    internal val orderBooks = mutableMapOf<Currency, OrderBook>()
     private val recentTrades = mutableMapOf<Currency, MutableList<Trade>>()
 
-    fun getOrderBook(pair: Currency): OrderBook {
-        return orderBooks.getOrDefault(pair, createOrderBook())
-    }
+    fun getOrderBook(pair: Currency): OrderBook = orderBooks.getOrDefault(pair, createOrderBook())
 
-    fun getRecentTrades(pair: Currency): List<Trade> {
-        return recentTrades.getOrDefault(pair, mutableListOf())
-    }
+    fun getRecentTrades(pair: Currency): List<Trade> =
+        recentTrades.getOrDefault(pair, mutableListOf())
 
     fun placeLimitOrder(order: Order): Order {
         val orderBook = orderBooks.getOrPut(order.pair) { createOrderBook() }
-        orderBook.sequenceNumber++
+        orderBook.sequenceNumber.inc()
 
-        if (order.side == Side.BUY) {
-            matchOrder(order, orderBook.asks, orderBook, order.pair)
-            if (order.quantity > 0) {
-                orderBook.bids.add(order)
+        when (order.side) {
+            Side.BUY -> {
+                matchOrder(order, orderBook.asks, orderBook, order.pair)
+                if (order.quantity > 0) {
+                    orderBook.bids.add(order)  // Add remaining quantity as a new buy order
+                }
             }
-        } else {
-            matchOrder(order, orderBook.bids, orderBook, order.pair)
-            if (order.quantity > 0) {
-                orderBook.asks.add(order)
+            Side.SELL -> {
+                matchOrder(order, orderBook.bids, orderBook, order.pair)
+                if (order.quantity > 0) {
+                    orderBook.asks.add(order)  // Add remaining quantity as a new sell order
+                }
             }
         }
+
         orderBook.lastChange = Instant.now()
         return order
     }
@@ -54,12 +55,12 @@ class OrderBookManager {
     ) {
         val trades = recentTrades.getOrPut(pair) { mutableListOf() }
 
-        val matchedOrders = oppositeOrders.asSequence()
-            .filter { oppositeOrder ->
-                (order.side == Side.BUY && order.price >= oppositeOrder.price) ||
-                        (order.side == Side.SELL && order.price <= oppositeOrder.price)
-            }
-            .takeWhile { oppositeOrder ->
+        val iterator = oppositeOrders.iterator()
+        while (iterator.hasNext()) {
+            val oppositeOrder = iterator.next()
+            if ((order.side == Side.BUY && order.price >= oppositeOrder.price) ||
+                (order.side == Side.SELL && order.price <= oppositeOrder.price)
+            ) {
                 val tradedQuantity = minOf(order.quantity, oppositeOrder.quantity)
                 val trade = Trade(
                     price = oppositeOrder.price,
@@ -76,14 +77,14 @@ class OrderBookManager {
                 oppositeOrder.quantity -= tradedQuantity
 
                 if (oppositeOrder.quantity == 0.0) {
-                    oppositeOrders.remove(oppositeOrder)
+                    iterator.remove()  // Remove from oppositeOrders if quantity is zero
                 }
 
-                order.quantity > 0
+                if (order.quantity == 0.0) {
+                    break
+                }
             }
-            .toList()
-
-        log.info("Matched orders ${matchedOrders.size}")
+        }
     }
 
     private fun createOrderBook(): OrderBook = OrderBook(
