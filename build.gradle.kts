@@ -50,14 +50,12 @@ dependencies {
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0")
     implementation("io.kotest:kotest-runner-junit5-jvm:4.6.0")
 
-
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.security:spring-security-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     testImplementation("io.mockk:mockk:1.12.0")
 
     testImplementation("org.springframework.boot:spring-boot-testcontainers")
-
 
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
