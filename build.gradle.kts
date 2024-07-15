@@ -46,8 +46,9 @@ dependencies {
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 
     implementation("org.jetbrains.kotlin:kotlin-reflect")
-    implementation("io.kotest:kotest-runner-junit5-jvm:4.6.0")
 
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0")
+    implementation("io.kotest:kotest-runner-junit5-jvm:4.6.0")
 
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
@@ -71,6 +72,9 @@ java {
 kotlin {
     compilerOptions {
         freeCompilerArgs.addAll("-Xjsr305=strict")
+    }
+    target {
+        jvmToolchain(17)
     }
 }
 
