@@ -1,7 +1,6 @@
 package com.valr.assignment.service
 
-import org.springframework.context.annotation.Bean
-import org.springframework.stereotype.Service
+import org.springframework.stereotype.Component
 import java.util.*
 
 interface IdGenerator {
@@ -9,7 +8,7 @@ interface IdGenerator {
     fun generate(): String
 }
 
-@Service
-class DefaultIdGenerator : IdGenerator {
+@Component
+class IdGeneratorImpl : IdGenerator {
     override fun generate(): String = UUID.randomUUID().toString()
 }

@@ -5,25 +5,29 @@ import com.valr.assignment.model.order.OrderBook
 import com.valr.assignment.model.order.Order
 import com.valr.assignment.model.order.Side
 import com.valr.assignment.model.trade.Trade
+import com.valr.assignment.utils.Locker
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.time.Instant
 import java.util.*
 
 @Service
-class OrderBookManager(private val idGenerator: IdGenerator) {
+class OrderBookManager(private val idGenerator: IdGenerator, private val locker : Locker) {
 
     private val log = LoggerFactory.getLogger(OrderBookManager::class.java)
 
     internal val orderBooks = mutableMapOf<Currency, OrderBook>()
     private val recentTrades = mutableMapOf<Currency, MutableList<Trade>>()
 
-    fun getOrderBook(pair: Currency): OrderBook = orderBooks.getOrDefault(pair, createOrderBook())
+    fun getOrderBook(pair: Currency): OrderBook = locker.withReadLock {
+        orderBooks.getOrDefault(pair, createOrderBook())
+    }
 
-    fun getRecentTrades(pair: Currency): List<Trade> =
+    fun getRecentTrades(pair: Currency): List<Trade> = locker.withReadLock {
         recentTrades.getOrDefault(pair, mutableListOf())
+    }
 
-    fun placeLimitOrder(order: Order): Order {
+    fun placeLimitOrder(order: Order): Order = locker.withWriteLock {
         val orderBook = orderBooks.getOrPut(order.pair) { createOrderBook() }
         orderBook.sequenceNumber++
 
@@ -47,7 +51,7 @@ class OrderBookManager(private val idGenerator: IdGenerator) {
         }
 
         orderBook.lastChange = Instant.now()
-        return order
+        order
     }
 
 

@@ -4,6 +4,7 @@ import com.valr.assignment.model.currency.Currency
 import com.valr.assignment.model.order.Order
 import com.valr.assignment.model.order.OrderBook
 import com.valr.assignment.model.order.Side
+import com.valr.assignment.utils.Locker
 import io.kotest.assertions.withClue
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldHaveSize
@@ -21,10 +22,15 @@ import java.util.*
 class OrderBookManagerTest : FunSpec({
 
     val idGenerator = mockk<IdGenerator>()
+    val locker = object : Locker {
+        override fun <T> withReadLock(block: () -> T): T = block()
+
+        override fun <T> withWriteLock(block: () -> T): T = block()
+    }
     val firstGeneratedId = UUID.fromString("65e0a581-971b-4520-974b-d0535c91e744").toString()
     val secondGeneratedId = UUID.fromString("8118466d-58da-434a-8072-c3f54fec7e08").toString()
 
-    fun createOrderBookManager() = OrderBookManager(idGenerator)
+    fun createOrderBookManager() = OrderBookManager(idGenerator, locker)
 
     beforeAny {
         clearAllMocks()
