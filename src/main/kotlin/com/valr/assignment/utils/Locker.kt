@@ -5,9 +5,9 @@ import java.util.concurrent.locks.ReentrantReadWriteLock
 
 interface Locker {
 
-    fun <T> withReadLock(block: () -> T) : T
+    fun <T> withReadLock(block: () -> T): T
 
-    fun <T> withWriteLock(block: () -> T) : T
+    fun <T> withWriteLock(block: () -> T): T
 }
 
 @Component
@@ -17,7 +17,7 @@ class LockerImpl : Locker {
     private val readLock = lock.readLock()
     private val writeLock = lock.writeLock()
 
-    override fun <T> withReadLock(block: () -> T) : T {
+    override fun <T> withReadLock(block: () -> T): T {
         try {
             readLock.lock()
             return block()
@@ -26,7 +26,7 @@ class LockerImpl : Locker {
         }
     }
 
-    override fun <T> withWriteLock(block: () -> T) : T {
+    override fun <T> withWriteLock(block: () -> T): T {
         try {
             writeLock.lock()
             return block()
@@ -34,5 +34,4 @@ class LockerImpl : Locker {
             writeLock.unlock()
         }
     }
-
 }

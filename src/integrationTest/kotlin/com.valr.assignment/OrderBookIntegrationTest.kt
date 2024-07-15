@@ -6,21 +6,16 @@ import com.valr.assignment.model.currency.Currency
 import com.valr.assignment.model.order.OrderBook
 import com.valr.assignment.model.order.Side
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.shouldHave
 import io.kotest.matchers.shouldNotBe
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.springframework.boot.test.web.client.TestRestTemplate
-import org.springframework.core.ParameterizedTypeReference
-import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus
-import org.springframework.http.HttpStatusCode
-import org.springframework.http.ResponseEntity
 import org.springframework.test.context.junit.jupiter.SpringExtension
 import org.testcontainers.containers.GenericContainer
-import java.util.*
+import java.util.Properties
 
 @ExtendWith(SpringExtension::class)
 class OrderBookIntegrationTest {
@@ -37,11 +32,10 @@ class OrderBookIntegrationTest {
             versionProps.getProperty("version") ?: "latest"
         }
 
-        val appContainer = GenericContainer<Nothing>("com.valr/assignment:${buildVersion}").apply {
+        val appContainer = GenericContainer<Nothing>("com.valr/assignment:$buildVersion").apply {
             withExposedPorts(8081)
             withEnv("SPRING_PROFILES_ACTIVE", "test")
         }
-
 
         @BeforeAll
         @JvmStatic
@@ -62,7 +56,7 @@ class OrderBookIntegrationTest {
         val restTemplate = TestRestTemplate()
         val port = appContainer.getMappedPort(8081)
 
-        val submitUrl = "http://localhost:${port}/api/orderbook/orders"
+        val submitUrl = "http://localhost:$port/api/orderbook/orders"
 
         val request = OrderRequestDTO(
             price = 50000,
@@ -80,7 +74,7 @@ class OrderBookIntegrationTest {
         body.quantity shouldBe 1.0
         body.price shouldBe 50000
 
-        val retrieveUrl = "http://localhost:${port}/api/orderbook/BTCZAR"
+        val retrieveUrl = "http://localhost:$port/api/orderbook/BTCZAR"
 
         val retrieveResponse = restTemplate.getForEntity(retrieveUrl, OrderBook::class.java)
         retrieveResponse.statusCode.value() shouldBe HttpStatus.OK.value()

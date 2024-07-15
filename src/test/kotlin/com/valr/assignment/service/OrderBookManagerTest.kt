@@ -16,8 +16,7 @@ import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk
 import java.time.Instant
-import java.util.*
-
+import java.util.UUID
 
 class OrderBookManagerTest : FunSpec({
 
@@ -222,7 +221,6 @@ class OrderBookManagerTest : FunSpec({
             trades[0].quantity shouldBeExactly 0.5
             trades[1].price shouldBeExactly 1100000
             trades[1].quantity shouldBeExactly 1.0
-
         }
     }
 

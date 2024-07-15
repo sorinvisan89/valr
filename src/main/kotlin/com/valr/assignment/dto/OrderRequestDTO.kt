@@ -6,7 +6,7 @@ import com.valr.assignment.model.order.Side
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotNull
 import java.time.Instant
-import java.util.*
+import java.util.UUID
 
 data class OrderRequestDTO(
     @field:NotNull(message = "Side must be specified") val side: Side,

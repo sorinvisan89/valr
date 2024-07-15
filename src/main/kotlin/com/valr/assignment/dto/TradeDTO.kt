@@ -1,7 +1,6 @@
 package com.valr.assignment.dto
 
 import com.valr.assignment.model.currency.Currency
-import com.valr.assignment.model.order.Order
 import com.valr.assignment.model.order.Side
 import com.valr.assignment.model.trade.Trade
 import java.time.Instant

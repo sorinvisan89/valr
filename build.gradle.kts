@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.konan.properties.Properties
+import org.jlleitschuh.gradle.ktlint.reporter.ReporterType
 
 plugins {
     id("org.springframework.boot") version "3.3.1"
@@ -7,6 +8,7 @@ plugins {
     kotlin("plugin.spring") version "1.9.24"
     java
     id("com.google.cloud.tools.jib") version "3.4.3"
+    id("org.jlleitschuh.gradle.ktlint") version "10.2.0"
 }
 
 group = "com.valr"
@@ -36,13 +38,12 @@ configurations {
     }
 }
 
-
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-logging")
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-validation")
-//	implementation("org.springframework.boot:spring-boot-starter-security")
+// 	implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 
     implementation("org.jetbrains.kotlin:kotlin-reflect")
@@ -60,7 +61,6 @@ dependencies {
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
-
 java {
     toolchain {
         languageVersion.set(JavaLanguageVersion.of(17))
@@ -76,6 +76,15 @@ kotlin {
     }
 }
 
+ktlint {
+    version.set("0.42.1")
+    ignoreFailures.set(false)
+    android.set(false)
+    reporters {
+        reporter(ReporterType.PLAIN) // Use the plain reporter (console output)
+        reporter(ReporterType.CHECKSTYLE) // Use the Checkstyle-compatible XML reporter
+    }
+}
 
 jib {
     from {
@@ -92,15 +101,13 @@ jib {
     }
 }
 
-
 tasks.withType<Test> {
     useJUnitPlatform()
 }
 
-
 tasks.withType<ProcessResources> {
     doLast {
-        val propertiesFile = file("${buildDir}/resources/main/version.properties")
+        val propertiesFile = file("$buildDir/resources/main/version.properties")
         propertiesFile.parentFile.mkdirs()
         val properties = Properties()
         properties.setProperty("version", rootProject.version.toString())

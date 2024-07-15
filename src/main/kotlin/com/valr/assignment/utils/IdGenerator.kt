@@ -1,7 +1,7 @@
 package com.valr.assignment.service
 
 import org.springframework.stereotype.Component
-import java.util.*
+import java.util.UUID
 
 interface IdGenerator {
 

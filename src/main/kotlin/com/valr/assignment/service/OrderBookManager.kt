@@ -1,18 +1,19 @@
 package com.valr.assignment.service
 
 import com.valr.assignment.model.currency.Currency
-import com.valr.assignment.model.order.OrderBook
 import com.valr.assignment.model.order.Order
+import com.valr.assignment.model.order.OrderBook
 import com.valr.assignment.model.order.Side
 import com.valr.assignment.model.trade.Trade
 import com.valr.assignment.utils.Locker
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.time.Instant
-import java.util.*
+import java.util.TreeSet
+import java.util.UUID
 
 @Service
-class OrderBookManager(private val idGenerator: IdGenerator, private val locker : Locker) {
+class OrderBookManager(private val idGenerator: IdGenerator, private val locker: Locker) {
 
     private val log = LoggerFactory.getLogger(OrderBookManager::class.java)
 
@@ -54,7 +55,6 @@ class OrderBookManager(private val idGenerator: IdGenerator, private val locker 
         order
     }
 
-
     private fun matchOrder(
         order: Order,
         oppositeOrders: MutableSet<Order>,
@@ -68,7 +68,7 @@ class OrderBookManager(private val idGenerator: IdGenerator, private val locker 
         val ordersToRemove = oppositeOrders.asSequence()
             .filter { oppositeOrder ->
                 (order.side == Side.BUY && order.price >= oppositeOrder.price) ||
-                        (order.side == Side.SELL && order.price <= oppositeOrder.price)
+                    (order.side == Side.SELL && order.price <= oppositeOrder.price)
             }
             .mapNotNull { oppositeOrder ->
                 val tradedQuantity = minOf(remainingQuantity, oppositeOrder.quantity)
@@ -104,14 +104,15 @@ class OrderBookManager(private val idGenerator: IdGenerator, private val locker 
     }
 
     private fun createOrderBook(): OrderBook = OrderBook(
-        asks = TreeSet(compareBy<Order> { it.price }
-            .thenBy { it.timestamp }
-            .thenBy { it.id }
+        asks = TreeSet(
+            compareBy<Order> { it.price }
+                .thenBy { it.timestamp }
+                .thenBy { it.id }
         ),
-        bids = TreeSet(compareByDescending<Order> { it.price }
-            .thenBy { it.timestamp }
-            .thenBy { it.id }
+        bids = TreeSet(
+            compareByDescending<Order> { it.price }
+                .thenBy { it.timestamp }
+                .thenBy { it.id }
         )
     )
-
 }

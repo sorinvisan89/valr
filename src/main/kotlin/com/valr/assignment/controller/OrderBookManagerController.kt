@@ -1,13 +1,15 @@
 package com.valr.assignment.controller
 
 import com.valr.assignment.api.OrderBookManagerApi
-import com.valr.assignment.dto.*
+import com.valr.assignment.dto.ErrorDTO
+import com.valr.assignment.dto.OrderBookDTO
+import com.valr.assignment.dto.OrderDTO
+import com.valr.assignment.dto.OrderRequestDTO
+import com.valr.assignment.dto.TradeDTO
 import com.valr.assignment.model.currency.Currency
 import com.valr.assignment.service.OrderBookManager
-import jakarta.validation.Valid
 import org.springframework.http.ResponseEntity
-import org.springframework.validation.annotation.Validated
-import org.springframework.web.bind.annotation.*
+import org.springframework.web.bind.annotation.RestController
 
 @RestController
 class OrderBookManagerController(private val orderBookManager: OrderBookManager) :
