@@ -31,7 +31,7 @@ class SecurityIntegrationTest : AbstractContainerSetup() {
         val authResponse = restTemplate.postForEntity(
             "http://localhost:${appContainer.getMappedPort(8081)}/api/auth",
             HttpEntity(authRequest, HttpHeaders()),
-            AuthenticationResponseDTO::class.java
+            Any::class.java
         )
 
         authResponse.statusCode.value() shouldBe HttpStatus.FORBIDDEN.value()

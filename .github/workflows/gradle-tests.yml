@@ -46,7 +46,9 @@ jobs:
 
       - name: Archive test reports
         if: always()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
-          name: test-reports
-          path: build/reports/tests
+          name: Test-Reports
+          path: |
+            build/reports/tests/test
+            build/reports/tests/integration-tests
