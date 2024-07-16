@@ -1,65 +1,44 @@
-// package com.valr.assignment.security
-//
-// import org.springframework.context.annotation.Bean
-// import org.springframework.context.annotation.Configuration
-// import org.springframework.http.HttpMethod
-// import org.springframework.security.config.annotation.web.builders.HttpSecurity
-// import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
-// import org.springframework.security.config.http.SessionCreationPolicy
-// import org.springframework.security.core.userdetails.User
-// import org.springframework.security.core.userdetails.UserDetailsService
-// import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
-// import org.springframework.security.crypto.password.PasswordEncoder
-// import org.springframework.security.provisioning.InMemoryUserDetailsManager
-// import org.springframework.security.web.SecurityFilterChain
-//
-//
-// //@Configuration
-// //@EnableWebSecurity
-// class SecurityConfig {
-//
-//    @Bean
-//    fun passwordEncoder(): PasswordEncoder {
-//        return BCryptPasswordEncoder()
-//    }
-//
-//    @Bean
-//    fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
-//        http
-//            .csrf { it.disable() }
-//            .authorizeHttpRequests {
-//                it
-//                    .requestMatchers("/api/orderbook/**")
-//                    .permitAll()
-//                    .requestMatchers(HttpMethod.POST, "/api/orderbook/orders")
-//                    .hasRole("USER")
-//                    .anyRequest()
-//                    .fullyAuthenticated()
-//            }
-//            .sessionManagement {
-//                it.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-//            }
-// //            .authenticationProvider(authenticationProvider)
-// //            .addFilterBefore(
-// //                jwtAuthenticationFilter,
-// //                UsernamePasswordAuthenticationFilter::class.java
-// //            )
-//        return http.build()
-//    }
-//
-//    @Bean
-//    fun users(): UserDetailsService {
-//        // The builder will ensure the passwords are encoded before saving in memory
-//        val user = User.builder()
-//            .username("user")
-//            .password(passwordEncoder().encode("password"))
-//            .roles("USER")
-//            .build()
-//        val admin = User.builder()
-//            .username("admin")
-//            .password(passwordEncoder().encode("admin"))
-//            .roles("USER", "ADMIN")
-//            .build()
-//        return InMemoryUserDetailsManager(user, admin)
-//    }
-// }
+package com.valr.assignment.security
+
+import com.valr.assignment.model.user.Role
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
+import org.springframework.http.HttpMethod
+import org.springframework.security.authentication.AuthenticationProvider
+import org.springframework.security.config.annotation.web.builders.HttpSecurity
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
+import org.springframework.security.config.http.SessionCreationPolicy
+import org.springframework.security.web.SecurityFilterChain
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
+
+@Configuration
+@EnableWebSecurity
+class SecurityConfig(private val authenticationProvider: AuthenticationProvider) {
+
+    @Bean
+    fun securityFilterChain(
+        http: HttpSecurity,
+        jwtAuthenticationFilter: JwtAuthenticationFilter
+    ): SecurityFilterChain {
+        http
+            .csrf { it.disable() }
+            .authorizeHttpRequests {
+                it
+                    .requestMatchers("/api/auth", "api/auth/refresh", "/error").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/orderbook/orders").hasRole(Role.USER.name)
+                    .requestMatchers("/api/orderbook/**").permitAll()
+                    .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                    .anyRequest()
+                    .fullyAuthenticated()
+            }
+            .sessionManagement {
+                it.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            }
+            .authenticationProvider(authenticationProvider)
+            .addFilterBefore(
+                jwtAuthenticationFilter,
+                UsernamePasswordAuthenticationFilter::class.java
+            )
+        return http.build()
+    }
+}
