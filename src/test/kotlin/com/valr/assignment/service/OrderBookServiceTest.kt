@@ -18,7 +18,7 @@ import io.mockk.mockk
 import java.time.Instant
 import java.util.UUID
 
-class OrderBookManagerTest : FunSpec({
+class OrderBookServiceTest : FunSpec({
 
     val idGenerator = mockk<IdGenerator>()
     val locker = object : Locker {
@@ -29,7 +29,7 @@ class OrderBookManagerTest : FunSpec({
     val firstGeneratedId = UUID.fromString("65e0a581-971b-4520-974b-d0535c91e744").toString()
     val secondGeneratedId = UUID.fromString("8118466d-58da-434a-8072-c3f54fec7e08").toString()
 
-    fun createOrderBookManager() = OrderBookManager(idGenerator, locker)
+    fun createOrderBookManager() = OrderBookService(idGenerator, locker)
 
     beforeAny {
         clearAllMocks()

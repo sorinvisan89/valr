@@ -1,5 +1,7 @@
 package com.valr.assignment.integration
 
+import com.valr.assignment.dto.AuthenticationRequestDTO
+import com.valr.assignment.dto.AuthenticationResponseDTO
 import com.valr.assignment.dto.OrderDTO
 import com.valr.assignment.dto.OrderRequestDTO
 import com.valr.assignment.model.currency.Currency
@@ -12,7 +14,11 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.springframework.boot.test.web.client.TestRestTemplate
+import org.springframework.http.HttpEntity
+import org.springframework.http.HttpHeaders
+import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus
+import org.springframework.http.ResponseEntity
 import org.springframework.test.context.junit.jupiter.SpringExtension
 import org.testcontainers.containers.GenericContainer
 import java.util.Properties
@@ -26,6 +32,10 @@ class OrderBookIntegrationTest {
             Properties().also {
                 it.load(this::class.java.getResourceAsStream("/version.properties"))
             }
+        }
+
+        val restTemplate by lazy {
+            TestRestTemplate()
         }
 
         private val buildVersion by lazy {
@@ -52,10 +62,7 @@ class OrderBookIntegrationTest {
 
     @Test
     fun `test place limit order`() {
-
-        val restTemplate = TestRestTemplate()
         val port = appContainer.getMappedPort(8081)
-
         val submitUrl = "http://localhost:$port/api/orderbook/orders"
 
         val request = OrderRequestDTO(
@@ -65,7 +72,13 @@ class OrderBookIntegrationTest {
             side = Side.SELL
         )
 
-        val response = restTemplate.postForEntity(submitUrl, request, OrderDTO::class.java)
+        val headers = generateAuthHeaders()
+        val response = restTemplate.exchange(
+            submitUrl,
+            HttpMethod.POST,
+            HttpEntity(request, headers),
+            OrderDTO::class.java
+        )
         response.statusCode.value() shouldBe HttpStatus.OK.value()
         response.body shouldNotBe null
         val body = response.body!!
@@ -87,5 +100,22 @@ class OrderBookIntegrationTest {
         orders.asks.first().price shouldBe 50000
         orders.asks.first().side shouldBe Side.SELL
         orders.asks.first().timestamp shouldNotBe null
+    }
+
+    private fun generateAuthHeaders(): HttpHeaders {
+        val authRequest = AuthenticationRequestDTO(email = "first@gmail.com", password = "pass1")
+        val authResponse = restTemplate.postForEntity(
+            "http://localhost:${appContainer.getMappedPort(8081)}/api/auth",
+            HttpEntity(authRequest, HttpHeaders()),
+            AuthenticationResponseDTO::class.java
+        )
+
+        authResponse.statusCode.value() shouldBe HttpStatus.OK.value()
+        authResponse.body shouldNotBe null
+        val token = authResponse.body!!.accessToken
+
+        val headers = HttpHeaders()
+        headers.set("Authorization", "Bearer $token")
+        return headers
     }
 }

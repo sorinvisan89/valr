@@ -13,9 +13,9 @@ import java.util.TreeSet
 import java.util.UUID
 
 @Service
-class OrderBookManager(private val idGenerator: IdGenerator, private val locker: Locker) {
+class OrderBookService(private val idGenerator: IdGenerator, private val locker: Locker) {
 
-    private val log = LoggerFactory.getLogger(OrderBookManager::class.java)
+    private val log = LoggerFactory.getLogger(OrderBookService::class.java)
 
     internal val orderBooks = mutableMapOf<Currency, OrderBook>()
     private val recentTrades = mutableMapOf<Currency, MutableList<Trade>>()
