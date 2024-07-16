@@ -1,64 +1,27 @@
 package com.valr.assignment.integration
 
+import com.valr.assignment.AbstractContainerSetup
 import com.valr.assignment.dto.AuthenticationRequestDTO
 import com.valr.assignment.dto.AuthenticationResponseDTO
 import com.valr.assignment.dto.OrderDTO
 import com.valr.assignment.dto.OrderRequestDTO
+import com.valr.assignment.dto.TradeDTO
 import com.valr.assignment.model.currency.Currency
 import com.valr.assignment.model.order.OrderBook
 import com.valr.assignment.model.order.Side
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
-import org.springframework.boot.test.web.client.TestRestTemplate
+import org.springframework.core.ParameterizedTypeReference
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus
-import org.springframework.http.ResponseEntity
 import org.springframework.test.context.junit.jupiter.SpringExtension
-import org.testcontainers.containers.GenericContainer
-import java.util.Properties
 
 @ExtendWith(SpringExtension::class)
-class OrderBookIntegrationTest {
-
-    companion object {
-
-        private val versionProps by lazy {
-            Properties().also {
-                it.load(this::class.java.getResourceAsStream("/version.properties"))
-            }
-        }
-
-        val restTemplate by lazy {
-            TestRestTemplate()
-        }
-
-        private val buildVersion by lazy {
-            versionProps.getProperty("version") ?: "latest"
-        }
-
-        val appContainer = GenericContainer<Nothing>("com.valr/assignment:$buildVersion").apply {
-            withExposedPorts(8081)
-            withEnv("SPRING_PROFILES_ACTIVE", "test")
-        }
-
-        @BeforeAll
-        @JvmStatic
-        fun startContainer() {
-            appContainer.start()
-        }
-
-        @AfterAll
-        @JvmStatic
-        fun stopContainer() {
-            appContainer.stop()
-        }
-    }
+class OrderBookIntegrationTest : AbstractContainerSetup() {
 
     @Test
     fun `test place limit order`() {
@@ -102,6 +65,56 @@ class OrderBookIntegrationTest {
         orders.asks.first().timestamp shouldNotBe null
     }
 
+    @Test
+    fun `test place limit order ascending and then matches all and clears`() {
+        val port = appContainer.getMappedPort(8081)
+        val submitUrl = "http://localhost:$port/api/orderbook/orders"
+
+        val currency = Currency.BTCZAR
+
+        val headers = generateAuthHeaders()
+
+        for (i in 1..10) {
+            val sellRequest = OrderRequestDTO(
+                price = 1000L * i,
+                quantity = 1.0,
+                pair = currency,
+                side = Side.SELL
+            )
+
+            val response = restTemplate.exchange(
+                submitUrl,
+                HttpMethod.POST,
+                HttpEntity(sellRequest, headers),
+                OrderDTO::class.java
+            )
+
+            response.statusCode.value() shouldBe HttpStatus.OK.value()
+        }
+
+        assertTradeCount(currency, 0)
+
+        for (i in 1..10) {
+            val buyRequest = OrderRequestDTO(
+                price = 1000L * i,
+                quantity = 1.0,
+                pair = currency,
+                side = Side.BUY
+            )
+
+            val response = restTemplate.exchange(
+                submitUrl,
+                HttpMethod.POST,
+                HttpEntity(buyRequest, headers),
+                OrderDTO::class.java
+            )
+
+            response.statusCode.value() shouldBe HttpStatus.OK.value()
+        }
+
+        assertTradeCount(currency, 10)
+    }
+
     private fun generateAuthHeaders(): HttpHeaders {
         val authRequest = AuthenticationRequestDTO(email = "first@gmail.com", password = "pass1")
         val authResponse = restTemplate.postForEntity(
@@ -117,5 +130,22 @@ class OrderBookIntegrationTest {
         val headers = HttpHeaders()
         headers.set("Authorization", "Bearer $token")
         return headers
+    }
+
+    private fun assertTradeCount(currency: Currency, expectedTrades: Int) {
+        val retrieveTradesUrl =
+            "http://localhost:${appContainer.getMappedPort(8081)}/api/orderbook/trades/$currency"
+
+        val responseType = object : ParameterizedTypeReference<List<TradeDTO>>() {}
+
+        val tradesResponse = restTemplate.exchange(
+            retrieveTradesUrl,
+            HttpMethod.GET,
+            null,
+            responseType
+        )
+        tradesResponse.statusCode.value() shouldBe HttpStatus.OK.value()
+        tradesResponse.body shouldNotBe null
+        tradesResponse.body!!.size shouldBe expectedTrades
     }
 }
