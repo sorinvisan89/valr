@@ -1,8 +1,0 @@
-[dependencies]
-kotlin-stdlib-jdk8 = "1.5.31"
-kotlin-reflect = "1.5.31"
-
-[plugins]
-org.jetbrains.kotlin.jvm = "1.5.31"
-org.jetbrains.kotlin.plugin.allopen = "1.5.31"
-io.kotest.kotlin = "5.0.0"
