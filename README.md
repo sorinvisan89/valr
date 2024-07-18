@@ -11,4 +11,4 @@ The technologies that were used are the following:
 8. GitHub actions to test and trigger pipelines
 9. Swagger for REST endpoint documentation
 
-The data structures that were used have been simplified, maybe a further optimisation would have been to have an OrderLevel map consisting of Currency and Price to get O(1) retrievals
+The data structures that were used have been simplified, maybe a further optimisation would have been to have a map with a key of **PriceLevel** consisting of **Currency** and **Price** to get O(1) retrievals
